@@ -44,15 +44,15 @@ export default function ChatPage() {
 
   return (
     <section className="page chat-page">
-      <h2>Ask About Your Material</h2>
+      <h2>Задайте вопрос по материалу</h2>
       <DocumentPicker />
 
       <div className="chat-window">
         {messages.length === 0 && (
           <p className="hint chat-empty">
             {documents.length
-              ? "Ask a question about your uploaded material to get started."
-              : "Upload some study material first, then come back here to ask questions."}
+              ? "Задайте вопрос по загруженному материалу, чтобы начать."
+              : "Сначала загрузите учебный материал, а затем возвращайтесь сюда с вопросами."}
           </p>
         )}
         {messages.map((m, i) => (
@@ -60,7 +60,7 @@ export default function ChatPage() {
             {m.content}
           </div>
         ))}
-        {sending && <div className="chat-bubble assistant typing">Thinking…</div>}
+        {sending && <div className="chat-bubble assistant typing">Печатает…</div>}
         <div ref={endRef} />
       </div>
 
@@ -71,11 +71,11 @@ export default function ChatPage() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a question about your material…"
+          placeholder="Задайте вопрос по материалу…"
           disabled={sending}
         />
         <button type="submit" disabled={sending || !input.trim()}>
-          Send
+          Отправить
         </button>
       </form>
     </section>

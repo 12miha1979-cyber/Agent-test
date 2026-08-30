@@ -10,7 +10,7 @@ export default function App() {
     <DocumentsProvider>
       <div className="app-shell">
         <header className="app-header">
-          <h1>📚 AI Study Tutor</h1>
+          <h1>📚 ИИ-репетитор</h1>
         </header>
 
         <main className="app-main">
@@ -25,15 +25,15 @@ export default function App() {
         <nav className="bottom-nav">
           <NavLink to="/upload" className={({ isActive }) => (isActive ? "active" : "")}>
             <span className="icon" aria-hidden="true">📄</span>
-            <span>Materials</span>
+            <span>Материалы</span>
           </NavLink>
           <NavLink to="/chat" className={({ isActive }) => (isActive ? "active" : "")}>
             <span className="icon" aria-hidden="true">💬</span>
-            <span>Chat</span>
+            <span>Чат</span>
           </NavLink>
           <NavLink to="/quiz" className={({ isActive }) => (isActive ? "active" : "")}>
             <span className="icon" aria-hidden="true">📝</span>
-            <span>Quiz Me</span>
+            <span>Викторина</span>
           </NavLink>
         </nav>
       </div>

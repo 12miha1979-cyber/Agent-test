@@ -17,7 +17,7 @@ router.get("/", (req, res) => {
 
 router.post("/upload", upload.single("file"), async (req, res) => {
   if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded." });
+    return res.status(400).json({ error: "Файл не был загружен." });
   }
 
   try {
@@ -25,7 +25,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     const trimmed = text.trim();
 
     if (!trimmed) {
-      return res.status(422).json({ error: "No readable text found in that file." });
+      return res.status(422).json({ error: "В этом файле не найден читаемый текст." });
     }
 
     const doc = addDocument({
@@ -42,14 +42,14 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     });
   } catch (err) {
     console.error("Upload error:", err);
-    res.status(400).json({ error: err.message || "Failed to process file." });
+    res.status(400).json({ error: err.message || "Не удалось обработать файл." });
   }
 });
 
 router.delete("/:id", (req, res) => {
   const removed = removeDocument(req.params.id);
   if (!removed) {
-    return res.status(404).json({ error: "Document not found." });
+    return res.status(404).json({ error: "Документ не найден." });
   }
   res.json({ success: true });
 });

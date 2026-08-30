@@ -52,12 +52,12 @@ export default function QuizPage() {
 
   return (
     <section className="page quiz-page">
-      <h2>Quiz Me</h2>
+      <h2>Проверь себя</h2>
       <DocumentPicker />
 
       <div className="quiz-controls">
         <label>
-          Number of questions
+          Количество вопросов
           <input
             type="number"
             min={1}
@@ -67,16 +67,16 @@ export default function QuizPage() {
           />
         </label>
         <button onClick={handleGenerate} disabled={loading || !documents.length}>
-          {questions.length ? "Generate New Quiz" : "Generate Quiz"}
+          {questions.length ? "Сгенерировать новую викторину" : "Сгенерировать викторину"}
         </button>
       </div>
 
       {error && <p className="error-text">{error}</p>}
-      {loading && <p className="hint">Working…</p>}
+      {loading && <p className="hint">Обработка…</p>}
 
       {results && (
         <div className="quiz-score">
-          Score: {results.score} / {results.total}
+          Результат: {results.score} / {results.total}
         </div>
       )}
 
@@ -108,7 +108,7 @@ export default function QuizPage() {
               ) : (
                 <textarea
                   rows={2}
-                  placeholder="Type your answer…"
+                  placeholder="Введите ваш ответ…"
                   value={answers[q.id] || ""}
                   disabled={!!results}
                   onChange={(e) => setAnswer(q.id, e.target.value)}
@@ -128,7 +128,7 @@ export default function QuizPage() {
 
       {questions.length > 0 && !results && (
         <button className="submit-quiz" onClick={handleSubmit} disabled={loading || !allAnswered}>
-          Submit Answers
+          Отправить ответы
         </button>
       )}
     </section>

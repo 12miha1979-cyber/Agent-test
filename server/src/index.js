@@ -22,9 +22,9 @@ app.use("/api/quiz", quizRouter);
 app.use((err, req, res, next) => {
   console.error(err);
   if (err.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({ error: "File is too large (max 20MB)." });
+    return res.status(413).json({ error: "Файл слишком большой (максимум 20 МБ)." });
   }
-  res.status(500).json({ error: "Something went wrong on the server." });
+  res.status(500).json({ error: "На сервере произошла ошибка." });
 });
 
 app.listen(PORT, () => {

@@ -10,22 +10,22 @@ router.post("/", async (req, res) => {
   const { message, documentIds, history } = req.body || {};
 
   if (!message || typeof message !== "string") {
-    return res.status(400).json({ error: "Message is required." });
+    return res.status(400).json({ error: "Необходимо ввести сообщение." });
   }
 
   if (!isConfigured()) {
     return res.status(503).json({
-      error: "The assistant is not configured. Set ANTHROPIC_API_KEY on the server to enable chat.",
+      error: "Ассистент не настроен. Укажите ANTHROPIC_API_KEY на сервере, чтобы включить чат.",
     });
   }
 
   const context = getCombinedText(documentIds).slice(0, MAX_CONTEXT_CHARS);
 
   if (!context.trim()) {
-    return res.status(400).json({ error: "Upload study material first, then ask a question about it." });
+    return res.status(400).json({ error: "Сначала загрузите учебный материал, затем задайте вопрос по нему." });
   }
 
-  const systemPrompt = `You are a friendly, patient study tutor. Answer the student's questions using ONLY the study material provided below as context. Explain concepts clearly, break down difficult ideas, and use examples when helpful. If the answer isn't contained in the material, say so honestly rather than making something up.
+  const systemPrompt = `You are a friendly, patient study tutor. Answer the student's questions using ONLY the study material provided below as context. Explain concepts clearly, break down difficult ideas, and use examples when helpful. If the answer isn't contained in the material, say so honestly rather than making something up. Always respond in Russian, regardless of the language of the study material.
 
 STUDY MATERIAL:
 """
@@ -53,7 +53,7 @@ ${context}
     res.json({ reply });
   } catch (err) {
     console.error("Chat error:", err);
-    res.status(502).json({ error: "Failed to get a response from the assistant." });
+    res.status(502).json({ error: "Не удалось получить ответ от ассистента." });
   }
 });
 

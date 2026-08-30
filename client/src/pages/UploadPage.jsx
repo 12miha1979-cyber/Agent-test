@@ -5,9 +5,9 @@ import { useDocuments } from "../DocumentsContext.jsx";
 const ACCEPTED = ".pdf,.docx,.txt";
 
 function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024) return `${bytes} Б`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
 export default function UploadPage() {
@@ -50,8 +50,10 @@ export default function UploadPage() {
 
   return (
     <section className="page upload-page">
-      <h2>Study Materials</h2>
-      <p className="subtitle">Upload PDF, Word (.docx), or plain text files to use as context for chat and quizzes.</p>
+      <h2>Учебные материалы</h2>
+      <p className="subtitle">
+        Загрузите файлы PDF, Word (.docx) или обычный текст, чтобы использовать их как контекст для чата и викторин.
+      </p>
 
       <div
         className={`dropzone ${dragActive ? "drag-active" : ""}`}
@@ -77,9 +79,9 @@ export default function UploadPage() {
         />
         <p className="dropzone-icon">⬆️</p>
         <p>
-          <strong>Tap to choose files</strong> or drag & drop here
+          <strong>Нажмите, чтобы выбрать файлы</strong> или перетащите их сюда
         </p>
-        <p className="hint">PDF, DOCX, TXT — up to 20MB each</p>
+        <p className="hint">PDF, DOCX, TXT — до 20 МБ каждый</p>
       </div>
 
       {uploading && (
@@ -90,11 +92,11 @@ export default function UploadPage() {
 
       {error && <p className="error-text">{error}</p>}
 
-      <h3>Uploaded ({documents.length})</h3>
+      <h3>Загружено ({documents.length})</h3>
       {loading ? (
-        <p className="hint">Loading…</p>
+        <p className="hint">Загрузка…</p>
       ) : documents.length === 0 ? (
-        <p className="hint">Nothing uploaded yet.</p>
+        <p className="hint">Пока ничего не загружено.</p>
       ) : (
         <ul className="doc-list">
           {documents.map((doc) => (
@@ -102,10 +104,10 @@ export default function UploadPage() {
               <div>
                 <div className="doc-name">{doc.name}</div>
                 <div className="doc-meta">
-                  {formatSize(doc.size)} · {doc.textLength.toLocaleString()} characters extracted
+                  {formatSize(doc.size)} · извлечено символов: {doc.textLength.toLocaleString()}
                 </div>
               </div>
-              <button className="icon-button" onClick={() => handleDelete(doc.id)} aria-label={`Remove ${doc.name}`}>
+              <button className="icon-button" onClick={() => handleDelete(doc.id)} aria-label={`Удалить ${doc.name}`}>
                 🗑️
               </button>
             </li>

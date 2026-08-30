@@ -3,7 +3,7 @@ const BASE = "/api";
 async function handle(res) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || `Request failed (${res.status})`);
+    throw new Error(data.error || `Ошибка запроса (${res.status})`);
   }
   return data;
 }
@@ -40,11 +40,11 @@ export function uploadDocument(file, onProgress) {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(data);
       } else {
-        reject(new Error(data.error || `Upload failed (${xhr.status})`));
+        reject(new Error(data.error || `Ошибка загрузки (${xhr.status})`));
       }
     };
 
-    xhr.onerror = () => reject(new Error("Network error during upload."));
+    xhr.onerror = () => reject(new Error("Сетевая ошибка при загрузке файла."));
     xhr.send(formData);
   });
 }

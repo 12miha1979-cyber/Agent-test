@@ -25,18 +25,18 @@ router.post("/generate", async (req, res) => {
 
   if (!isConfigured()) {
     return res.status(503).json({
-      error: "The assistant is not configured. Set ANTHROPIC_API_KEY on the server to enable quizzes.",
+      error: "Ассистент не настроен. Укажите ANTHROPIC_API_KEY на сервере, чтобы включить викторины.",
     });
   }
 
   const context = getCombinedText(documentIds).slice(0, MAX_CONTEXT_CHARS);
   if (!context.trim()) {
-    return res.status(400).json({ error: "Upload study material first, then generate a quiz." });
+    return res.status(400).json({ error: "Сначала загрузите учебный материал, затем сгенерируйте викторину." });
   }
 
   const count = Math.min(Math.max(Number(numQuestions) || 5, 1), 15);
 
-  const prompt = `Based on the study material below, write exactly ${count} quiz questions to test understanding of the material. Mix multiple-choice and short-answer questions.
+  const prompt = `Based on the study material below, write exactly ${count} quiz questions to test understanding of the material. Mix multiple-choice and short-answer questions. Write all question text, options, model answers, and explanations in Russian, regardless of the language of the study material.
 
 Respond with ONLY a JSON array (no markdown fences, no commentary). Each item must have this shape:
 - For multiple choice: {"type": "multiple_choice", "question": "...", "options": ["...", "...", "...", "..."], "correctAnswer": "the exact text of the correct option", "explanation": "brief explanation"}
@@ -68,7 +68,7 @@ ${context}
     res.status(201).json({ quizId: quiz.id, questions: quiz.questions.map(stripToPublicQuestion) });
   } catch (err) {
     console.error("Quiz generation error:", err);
-    res.status(502).json({ error: "Failed to generate a quiz. Please try again." });
+    res.status(502).json({ error: "Не удалось сгенерировать викторину. Попробуйте ещё раз." });
   }
 });
 
@@ -77,11 +77,11 @@ router.post("/grade", async (req, res) => {
 
   const quiz = getQuiz(quizId);
   if (!quiz) {
-    return res.status(404).json({ error: "Quiz not found. It may have expired — try generating a new one." });
+    return res.status(404).json({ error: "Викторина не найдена. Возможно, она устарела — сгенерируйте новую." });
   }
 
   if (!Array.isArray(answers)) {
-    return res.status(400).json({ error: "Answers array is required." });
+    return res.status(400).json({ error: "Необходим массив ответов." });
   }
 
   const results = [];
@@ -99,7 +99,7 @@ router.post("/grade", async (req, res) => {
         correct,
         correctAnswer: question.correctAnswer,
         explanation: question.explanation,
-        feedback: correct ? "Correct!" : `Not quite. The correct answer is: ${question.correctAnswer}`,
+        feedback: correct ? "Верно!" : `Не совсем. Правильный ответ: ${question.correctAnswer}`,
       });
     } else {
       results.push({
@@ -117,7 +117,7 @@ router.post("/grade", async (req, res) => {
 
   if (shortAnswerItems.length && isConfigured()) {
     try {
-      const gradingPrompt = `Grade the following short-answer quiz responses. For each, decide if the student's answer is correct, partially correct, or incorrect compared to the model answer, and give brief encouraging feedback (1-2 sentences).
+      const gradingPrompt = `Grade the following short-answer quiz responses. For each, decide if the student's answer is correct, partially correct, or incorrect compared to the model answer, and give brief encouraging feedback (1-2 sentences) written in Russian.
 
 Respond with ONLY a JSON array, one object per item in the same order, shaped as:
 {"correct": true|false, "feedback": "..."}
@@ -150,21 +150,21 @@ ${JSON.stringify(
 
       shortAnswerItems.forEach((item, i) => {
         item.correct = graded[i]?.correct ?? false;
-        item.feedback = graded[i]?.feedback ?? "Thanks for your answer.";
+        item.feedback = graded[i]?.feedback ?? "Спасибо за ваш ответ.";
         delete item.needsGrading;
       });
     } catch (err) {
       console.error("Short answer grading error:", err);
       shortAnswerItems.forEach((item) => {
         item.correct = null;
-        item.feedback = `We couldn't auto-grade this one. Compare with the model answer: ${item.modelAnswer}`;
+        item.feedback = `Не удалось автоматически проверить этот ответ. Сравните с эталонным ответом: ${item.modelAnswer}`;
         delete item.needsGrading;
       });
     }
   } else {
     shortAnswerItems.forEach((item) => {
       item.correct = null;
-      item.feedback = `Compare with the model answer: ${item.modelAnswer}`;
+      item.feedback = `Сравните с эталонным ответом: ${item.modelAnswer}`;
       delete item.needsGrading;
     });
   }

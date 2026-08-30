@@ -21,5 +21,5 @@ export async function extractText(buffer, mimetype, originalname) {
     return buffer.toString("utf-8");
   }
 
-  throw new Error("Unsupported file type. Please upload a PDF, DOCX, or TXT file.");
+  throw new Error("Неподдерживаемый тип файла. Загрузите файл в формате PDF, DOCX или TXT.");
 }

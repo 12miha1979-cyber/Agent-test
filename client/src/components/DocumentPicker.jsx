@@ -9,7 +9,7 @@ export default function DocumentPicker() {
   if (!documents.length) {
     return (
       <p className="hint">
-        No study materials uploaded yet. Head to the <strong>Materials</strong> tab to add some.
+        Учебные материалы ещё не загружены. Перейдите на вкладку <strong>Материалы</strong>, чтобы добавить их.
       </p>
     );
   }
@@ -17,8 +17,10 @@ export default function DocumentPicker() {
   return (
     <div className="doc-picker">
       <p className="hint">
-        Using {selectedIds.length ? selectedIds.length : "all"} document{selectedIds.length === 1 ? "" : "s"} as
-        context. Select specific ones below, or leave none selected to use everything.
+        {selectedIds.length
+          ? `В качестве контекста используется документов: ${selectedIds.length}.`
+          : "В качестве контекста используются все документы."}{" "}
+        Выберите конкретные документы ниже или не выбирайте ни одного, чтобы использовать все.
       </p>
       <div className="doc-chip-list">
         {documents.map((doc) => (
