@@ -35,4 +35,4 @@ Runs on `http://localhost:5173` and proxies `/api` calls to the server. Open it 
 - Uploaded documents and their extracted text are stored in a local SQLite database at `server/data/tutor.db` (created automatically on first run) and survive server restarts. Delete a document from the Materials tab to remove it permanently.
 - Quizzes are still kept in memory only, keyed by a generated quiz ID, so grading can check answers server-side — they don't need to survive a restart.
 - Short-answer quiz grading uses the AI model to compare the student's answer against a model answer; multiple-choice grading is done with a simple string match.
-- Chat uses `AITUNNEL_MODEL` (defaults to `claude-sonnet-4-5`) for stronger reasoning; quiz generation and short-answer grading use the cheaper `AITUNNEL_QUIZ_MODEL` (defaults to `deepseek-v4-flash`) since those tasks don't need it.
+- Chat uses `AITUNNEL_MODEL` (defaults to `claude-sonnet-4.5`) for stronger reasoning; quiz generation and short-answer grading use the cheaper `AITUNNEL_QUIZ_MODEL` (defaults to `deepseek-v4-flash`) since those tasks don't need it.

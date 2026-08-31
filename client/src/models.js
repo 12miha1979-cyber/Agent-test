@@ -1,6 +1,6 @@
 export const MODEL_OPTIONS = [
   {
-    value: "claude-sonnet-4-5",
+    value: "claude-sonnet-4.5",
     label: "Claude Sonnet",
     description: "Более качественные ответы",
   },
