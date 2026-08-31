@@ -1,6 +1,6 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
-import { anthropic, MODEL, isConfigured } from "../anthropic.js";
+import { ai, MODEL, isConfigured } from "../ai.js";
 import { getCombinedText } from "../storage.js";
 import { addQuiz, getQuiz } from "../quizStore.js";
 
@@ -25,7 +25,7 @@ router.post("/generate", async (req, res) => {
 
   if (!isConfigured()) {
     return res.status(503).json({
-      error: "Ассистент не настроен. Укажите ANTHROPIC_API_KEY на сервере, чтобы включить викторины.",
+      error: "Ассистент не настроен. Укажите AITUNNEL_API_KEY на сервере, чтобы включить викторины.",
     });
   }
 
@@ -48,16 +48,13 @@ ${context}
 """`;
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await ai.chat.completions.create({
       model: MODEL,
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = response.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("\n");
+    const text = response.choices[0]?.message?.content ?? "";
 
     const parsed = extractJson(text);
 
@@ -133,16 +130,13 @@ ${JSON.stringify(
   2
 )}`;
 
-      const response = await anthropic.messages.create({
+      const response = await ai.chat.completions.create({
         model: MODEL,
         max_tokens: 1024,
         messages: [{ role: "user", content: gradingPrompt }],
       });
 
-      const text = response.content
-        .filter((block) => block.type === "text")
-        .map((block) => block.text)
-        .join("\n");
+      const text = response.choices[0]?.message?.content ?? "";
 
       const start = text.indexOf("[");
       const end = text.lastIndexOf("]");

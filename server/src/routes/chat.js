@@ -1,5 +1,5 @@
 import express from "express";
-import { anthropic, MODEL, isConfigured } from "../anthropic.js";
+import { ai, MODEL, isConfigured } from "../ai.js";
 import { getCombinedText } from "../storage.js";
 
 const router = express.Router();
@@ -15,7 +15,7 @@ router.post("/", async (req, res) => {
 
   if (!isConfigured()) {
     return res.status(503).json({
-      error: "Ассистент не настроен. Укажите ANTHROPIC_API_KEY на сервере, чтобы включить чат.",
+      error: "Ассистент не настроен. Укажите AITUNNEL_API_KEY на сервере, чтобы включить чат.",
     });
   }
 
@@ -33,22 +33,19 @@ ${context}
 """`;
 
   const messages = [
+    { role: "system", content: systemPrompt },
     ...(Array.isArray(history) ? history.slice(-10) : []),
     { role: "user", content: message },
   ];
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await ai.chat.completions.create({
       model: MODEL,
       max_tokens: 1024,
-      system: systemPrompt,
       messages,
     });
 
-    const reply = response.content
-      .filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("\n");
+    const reply = response.choices[0]?.message?.content ?? "";
 
     res.json({ reply });
   } catch (err) {

@@ -4,7 +4,7 @@ A mobile-friendly web app that lets you upload study materials (PDF, DOCX, TXT),
 
 ## Structure
 
-- `server/` — Node.js/Express API. Extracts text from uploads and stores it in memory, proxies chat/quiz generation to the Anthropic API.
+- `server/` — Node.js/Express API. Extracts text from uploads and stores it in memory, proxies chat/quiz generation to AITUNNEL (an OpenAI-compatible proxy for Claude and other models).
 - `client/` — React (Vite) frontend with three tabs: Materials, Chat, Quiz Me.
 
 ## Setup
@@ -14,11 +14,11 @@ A mobile-friendly web app that lets you upload study materials (PDF, DOCX, TXT),
 ```bash
 cd server
 npm install
-cp .env.example .env   # then set ANTHROPIC_API_KEY
+cp .env.example .env   # then set AITUNNEL_API_KEY
 npm run dev
 ```
 
-Runs on `http://localhost:3001`. Without `ANTHROPIC_API_KEY` set, uploads still work but Chat and Quiz Me will return a friendly "not configured" error.
+Runs on `http://localhost:3001`. Without `AITUNNEL_API_KEY` set, uploads still work but Chat and Quiz Me will return a friendly "not configured" error.
 
 ### 2. Client
 
