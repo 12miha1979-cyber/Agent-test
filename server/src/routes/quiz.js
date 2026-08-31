@@ -1,6 +1,6 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
-import { ai, QUIZ_MODEL, isConfigured } from "../ai.js";
+import { ai, QUIZ_MODEL, isConfigured, resolveModel } from "../ai.js";
 import { getCombinedText } from "../storage.js";
 import { addQuiz, getQuiz } from "../quizStore.js";
 
@@ -21,7 +21,8 @@ function extractJson(text) {
 }
 
 router.post("/generate", async (req, res) => {
-  const { documentIds, numQuestions = 5 } = req.body || {};
+  const { documentIds, numQuestions = 5, model } = req.body || {};
+  const selectedModel = resolveModel(model, QUIZ_MODEL);
 
   if (!isConfigured()) {
     return res.status(503).json({
@@ -49,7 +50,7 @@ ${context}
 
   try {
     const response = await ai.chat.completions.create({
-      model: QUIZ_MODEL,
+      model: selectedModel,
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
@@ -60,7 +61,7 @@ ${context}
 
     const questions = parsed.map((q) => ({ id: uuidv4(), ...q }));
 
-    const quiz = addQuiz({ id: uuidv4(), questions, createdAt: new Date().toISOString() });
+    const quiz = addQuiz({ id: uuidv4(), questions, model: selectedModel, createdAt: new Date().toISOString() });
 
     res.status(201).json({ quizId: quiz.id, questions: quiz.questions.map(stripToPublicQuestion) });
   } catch (err) {
@@ -131,7 +132,7 @@ ${JSON.stringify(
 )}`;
 
       const response = await ai.chat.completions.create({
-        model: QUIZ_MODEL,
+        model: quiz.model || QUIZ_MODEL,
         max_tokens: 1024,
         messages: [{ role: "user", content: gradingPrompt }],
       });

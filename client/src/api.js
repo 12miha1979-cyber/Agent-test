@@ -53,19 +53,19 @@ export function deleteDocument(id) {
   return fetch(`${BASE}/documents/${id}`, { method: "DELETE" }).then(handle);
 }
 
-export function sendChatMessage({ message, documentIds, history }) {
+export function sendChatMessage({ message, documentIds, history, model }) {
   return fetch(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, documentIds, history }),
+    body: JSON.stringify({ message, documentIds, history, model }),
   }).then(handle);
 }
 
-export function generateQuiz({ documentIds, numQuestions }) {
+export function generateQuiz({ documentIds, numQuestions, model }) {
   return fetch(`${BASE}/quiz/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ documentIds, numQuestions }),
+    body: JSON.stringify({ documentIds, numQuestions, model }),
   }).then(handle);
 }
 

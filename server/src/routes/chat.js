@@ -1,5 +1,5 @@
 import express from "express";
-import { ai, MODEL, isConfigured } from "../ai.js";
+import { ai, MODEL, isConfigured, resolveModel } from "../ai.js";
 import { getCombinedText } from "../storage.js";
 
 const router = express.Router();
@@ -7,7 +7,7 @@ const router = express.Router();
 const MAX_CONTEXT_CHARS = 60000;
 
 router.post("/", async (req, res) => {
-  const { message, documentIds, history } = req.body || {};
+  const { message, documentIds, history, model } = req.body || {};
 
   if (!message || typeof message !== "string") {
     return res.status(400).json({ error: "Необходимо ввести сообщение." });
@@ -40,7 +40,7 @@ ${context}
 
   try {
     const response = await ai.chat.completions.create({
-      model: MODEL,
+      model: resolveModel(model, MODEL),
       max_tokens: 1024,
       messages,
     });

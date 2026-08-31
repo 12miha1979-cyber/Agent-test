@@ -2,10 +2,15 @@ import React, { useState } from "react";
 import { generateQuiz, gradeQuiz } from "../api.js";
 import { useDocuments } from "../DocumentsContext.jsx";
 import DocumentPicker from "../components/DocumentPicker.jsx";
+import ModelSelector from "../components/ModelSelector.jsx";
+import { MODEL_OPTIONS } from "../models.js";
+
+const DEFAULT_QUIZ_MODEL = MODEL_OPTIONS.find((m) => m.value === "deepseek-v4-flash")?.value ?? MODEL_OPTIONS[0].value;
 
 export default function QuizPage() {
   const { documents, selectedIds } = useDocuments();
   const [numQuestions, setNumQuestions] = useState(5);
+  const [model, setModel] = useState(DEFAULT_QUIZ_MODEL);
   const [quizId, setQuizId] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -19,7 +24,7 @@ export default function QuizPage() {
     setResults(null);
     setAnswers({});
     try {
-      const { quizId: id, questions: qs } = await generateQuiz({ documentIds: selectedIds, numQuestions });
+      const { quizId: id, questions: qs } = await generateQuiz({ documentIds: selectedIds, numQuestions, model });
       setQuizId(id);
       setQuestions(qs);
     } catch (err) {
@@ -54,6 +59,7 @@ export default function QuizPage() {
     <section className="page quiz-page">
       <h2>Проверь себя</h2>
       <DocumentPicker />
+      <ModelSelector value={model} onChange={setModel} disabled={loading} />
 
       <div className="quiz-controls">
         <label>

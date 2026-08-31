@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { sendChatMessage } from "../api.js";
 import { useDocuments } from "../DocumentsContext.jsx";
 import DocumentPicker from "../components/DocumentPicker.jsx";
+import ModelSelector from "../components/ModelSelector.jsx";
+import { DEFAULT_MODEL } from "../models.js";
 
 export default function ChatPage() {
   const { documents, selectedIds } = useDocuments();
@@ -9,6 +11,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [model, setModel] = useState(DEFAULT_MODEL);
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -33,6 +36,7 @@ export default function ChatPage() {
         message: text,
         documentIds: selectedIds,
         history,
+        model,
       });
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
@@ -46,6 +50,7 @@ export default function ChatPage() {
     <section className="page chat-page">
       <h2>Задайте вопрос по материалу</h2>
       <DocumentPicker />
+      <ModelSelector value={model} onChange={setModel} disabled={sending} />
 
       <div className="chat-window">
         {messages.length === 0 && (
