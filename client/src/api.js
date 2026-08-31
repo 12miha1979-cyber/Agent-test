@@ -1,4 +1,5 @@
-const BASE = "/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const BASE = `${API_URL.replace(/\/$/, "")}/api`;
 
 async function handle(res) {
   const data = await res.json().catch(() => ({}));

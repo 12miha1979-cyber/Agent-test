@@ -28,7 +28,14 @@ npm install
 npm run dev
 ```
 
-Runs on `http://localhost:5173` and proxies `/api` calls to the server. Open it on your phone by visiting `http://<your-computer-ip>:5173` while on the same network (the dev server binds to all interfaces).
+Runs on `http://localhost:5173` and talks to the server at `VITE_API_URL` (see `client/.env.example`), which defaults to `http://localhost:3001` if not set. Open it on your phone by visiting `http://<your-computer-ip>:5173` while on the same network (the dev server binds to all interfaces).
+
+## Deploying to separate hosts
+
+The client and server can be deployed to different domains:
+
+- **Server**: set `CORS_ORIGIN` to the client's deployed origin (comma-separate multiple origins if needed). Leave it unset or `*` to allow any origin.
+- **Client**: set `VITE_API_URL` at build time to the server's deployed URL (e.g. `https://api.example.com`), then run `npm run build`. This is a build-time variable — rebuild the client if it changes.
 
 ## Notes on this first version
 

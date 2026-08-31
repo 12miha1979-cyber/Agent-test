@@ -9,7 +9,12 @@ import { isConfigured } from "./ai.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// CORS_ORIGIN can be a single origin, a comma-separated list, or unset/"*" to allow any origin
+// (needed since the client is deployed on a different domain than the server).
+const corsOrigin = process.env.CORS_ORIGIN;
+const allowedOrigins = corsOrigin && corsOrigin !== "*" ? corsOrigin.split(",").map((o) => o.trim()) : true;
+
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (req, res) => {
