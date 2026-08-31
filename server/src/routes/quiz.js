@@ -1,6 +1,6 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
-import { ai, MODEL, isConfigured } from "../ai.js";
+import { ai, QUIZ_MODEL, isConfigured } from "../ai.js";
 import { getCombinedText } from "../storage.js";
 import { addQuiz, getQuiz } from "../quizStore.js";
 
@@ -49,7 +49,7 @@ ${context}
 
   try {
     const response = await ai.chat.completions.create({
-      model: MODEL,
+      model: QUIZ_MODEL,
       max_tokens: 2048,
       messages: [{ role: "user", content: prompt }],
     });
@@ -131,7 +131,7 @@ ${JSON.stringify(
 )}`;
 
       const response = await ai.chat.completions.create({
-        model: MODEL,
+        model: QUIZ_MODEL,
         max_tokens: 1024,
         messages: [{ role: "user", content: gradingPrompt }],
       });
