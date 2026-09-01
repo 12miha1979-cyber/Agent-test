@@ -174,13 +174,9 @@ body {
   padding: 4px 8px;
 }
 
-/* Document picker */
-.doc-picker {
-  margin-bottom: 12px;
-}
-
-/* Model selector */
-.model-selector {
+/* Model selector / direction filter (chat & quiz pages) */
+.model-selector,
+.direction-filter {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -189,7 +185,8 @@ body {
   margin-bottom: 16px;
 }
 
-.model-selector select {
+.model-selector select,
+.direction-filter select {
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -200,26 +197,61 @@ body {
   max-width: 320px;
 }
 
-.doc-chip-list {
+/* Direction picker (upload page) */
+.direction-picker {
+  margin-bottom: 16px;
+}
+
+.direction-options {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
-.doc-chip {
+.direction-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
-  background: var(--surface);
   border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.85rem;
   cursor: pointer;
+  font-size: 0.85rem;
+  background: var(--surface);
 }
 
-.doc-chip.selected {
-  background: var(--primary);
-  color: white;
+.direction-option.checked {
   border-color: var(--primary);
+  background: #eef2ff;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Direction badge (materials list) */
+.direction-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.direction-badge.cbt {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.direction-badge.sft {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.processing-hint {
+  margin-top: 12px;
+  font-style: italic;
 }
 
 /* Chat page */
@@ -321,6 +353,14 @@ body {
 
 .quiz-controls input[type="number"] {
   width: 70px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.quiz-controls input[type="text"] {
+  width: 220px;
+  max-width: 100%;
   padding: 8px;
   border-radius: 8px;
   border: 1px solid var(--border);

@@ -5,7 +5,6 @@ const DocumentsContext = createContext(null);
 
 export function DocumentsProvider({ children }) {
   const [documents, setDocuments] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -13,7 +12,6 @@ export function DocumentsProvider({ children }) {
     try {
       const { documents: docs } = await listDocuments();
       setDocuments(docs);
-      setSelectedIds((prev) => prev.filter((id) => docs.some((d) => d.id === id)));
     } finally {
       setLoading(false);
     }
@@ -23,17 +21,7 @@ export function DocumentsProvider({ children }) {
     refresh();
   }, [refresh]);
 
-  const toggleSelected = (id) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
-
-  return (
-    <DocumentsContext.Provider
-      value={{ documents, loading, refresh, selectedIds, setSelectedIds, toggleSelected }}
-    >
-      {children}
-    </DocumentsContext.Provider>
-  );
+  return <DocumentsContext.Provider value={{ documents, loading, refresh }}>{children}</DocumentsContext.Provider>;
 }
 
 export function useDocuments() {

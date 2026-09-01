@@ -2,7 +2,11 @@ import express from "express";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { extractText } from "../utils/extract.js";
-import { addDocument, listDocuments, removeDocument } from "../storage.js";
+import { addDocument, listDocuments, removeDocument, addChunks } from "../storage.js";
+import { isValidDirection } from "../directions.js";
+import { chunkText } from "../chunking.js";
+import { embedTexts } from "../embeddings.js";
+import { isConfigured } from "../ai.js";
 
 const router = express.Router();
 
@@ -24,6 +28,11 @@ router.post("/upload", upload.single("file"), async (req, res) => {
   // UTF-8 filename (e.g. Cyrillic) arrives mangled — re-decode it correctly.
   req.file.originalname = Buffer.from(req.file.originalname, "latin1").toString("utf8");
 
+  const direction = req.body?.direction;
+  if (!isValidDirection(direction)) {
+    return res.status(400).json({ error: "Укажите направление документа: «Системная семейная терапия» или «КПТ»." });
+  }
+
   try {
     const text = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname);
     const trimmed = text.trim();
@@ -32,17 +41,53 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       return res.status(422).json({ error: "В этом файле не найден читаемый текст." });
     }
 
+    const docId = uuidv4();
     const doc = addDocument({
-      id: uuidv4(),
+      id: docId,
       name: req.file.originalname,
       size: req.file.size,
       text: trimmed,
       textLength: trimmed.length,
+      direction,
       createdAt: new Date().toISOString(),
     });
 
+    // Chunk + embed for RAG retrieval. Best-effort: the document itself is
+    // already saved, so a chunking/embedding failure (e.g. AITUNNEL down)
+    // doesn't lose the upload — it just won't be retrievable in chat/quiz
+    // until re-uploaded once the assistant is available again.
+    let chunkCount = 0;
+    if (isConfigured()) {
+      try {
+        const pieces = chunkText(trimmed);
+        const vectors = await embedTexts(pieces);
+        const chunks = pieces.map((pieceText, i) => ({
+          id: uuidv4(),
+          documentId: docId,
+          documentName: doc.name,
+          direction,
+          chunkIndex: i,
+          text: pieceText,
+          embedding: vectors[i],
+          createdAt: new Date().toISOString(),
+        }));
+        addChunks(chunks);
+        chunkCount = chunks.length;
+      } catch (err) {
+        console.error("Chunking/embedding error:", err);
+      }
+    }
+
     res.status(201).json({
-      document: { id: doc.id, name: doc.name, size: doc.size, createdAt: doc.createdAt, textLength: doc.textLength },
+      document: {
+        id: doc.id,
+        name: doc.name,
+        size: doc.size,
+        direction: doc.direction,
+        createdAt: doc.createdAt,
+        textLength: doc.textLength,
+      },
+      chunkCount,
     });
   } catch (err) {
     console.error("Upload error:", err);

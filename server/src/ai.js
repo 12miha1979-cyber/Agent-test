@@ -7,6 +7,7 @@ export const ai = apiKey
   : null;
 export const MODEL = process.env.AITUNNEL_MODEL || "claude-sonnet-4.5";
 export const QUIZ_MODEL = process.env.AITUNNEL_QUIZ_MODEL || "deepseek-v4-flash";
+export const EMBEDDING_MODEL = process.env.AITUNNEL_EMBEDDING_MODEL || "text-embedding-3-small";
 
 // Models the client is allowed to request explicitly, so a request body can't
 // smuggle an arbitrary model string through to AITUNNEL.

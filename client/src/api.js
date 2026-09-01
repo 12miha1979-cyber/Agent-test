@@ -17,9 +17,10 @@ export function listDocuments() {
   return fetch(`${BASE}/documents`).then(handle);
 }
 
-export function uploadDocument(file, onProgress) {
+export function uploadDocument(file, direction, onProgress) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("direction", direction);
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -54,19 +55,19 @@ export function deleteDocument(id) {
   return fetch(`${BASE}/documents/${id}`, { method: "DELETE" }).then(handle);
 }
 
-export function sendChatMessage({ message, documentIds, history, model }) {
+export function sendChatMessage({ message, history, model, direction }) {
   return fetch(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, documentIds, history, model }),
+    body: JSON.stringify({ message, history, model, direction }),
   }).then(handle);
 }
 
-export function generateQuiz({ documentIds, numQuestions, model }) {
+export function generateQuiz({ numQuestions, model, direction, topic }) {
   return fetch(`${BASE}/quiz/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ documentIds, numQuestions, model }),
+    body: JSON.stringify({ numQuestions, model, direction, topic }),
   }).then(handle);
 }
 

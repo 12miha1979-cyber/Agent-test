@@ -1,12 +1,12 @@
 import express from "express";
 import { v4 as uuidv4 } from "uuid";
 import { ai, QUIZ_MODEL, isConfigured, resolveModel } from "../ai.js";
-import { getCombinedText } from "../storage.js";
+import { retrieveChunks } from "../retrieval.js";
 import { addQuiz, getQuiz } from "../quizStore.js";
 
 const router = express.Router();
 
-const MAX_CONTEXT_CHARS = 60000;
+const TOP_K = 10;
 
 function stripToPublicQuestion(q) {
   const { id, type, question, options } = q;
@@ -20,8 +20,14 @@ function extractJson(text) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
+function buildContext(chunks) {
+  return chunks
+    .map((c) => `[Источник: ${c.documentName} | Направление: ${c.direction}]\n${c.text}`)
+    .join("\n\n---\n\n");
+}
+
 router.post("/generate", async (req, res) => {
-  const { documentIds, numQuestions = 5, model } = req.body || {};
+  const { numQuestions = 5, model, direction, topic } = req.body || {};
   const selectedModel = resolveModel(model, QUIZ_MODEL);
 
   if (!isConfigured()) {
@@ -30,20 +36,31 @@ router.post("/generate", async (req, res) => {
     });
   }
 
-  const context = getCombinedText(documentIds).slice(0, MAX_CONTEXT_CHARS);
-  if (!context.trim()) {
+  const trimmedTopic = typeof topic === "string" ? topic.trim() : "";
+  const query = trimmedTopic || direction || "ключевые понятия и важные факты";
+
+  let chunks;
+  try {
+    chunks = await retrieveChunks({ query, direction, topK: TOP_K });
+  } catch (err) {
+    console.error("Retrieval error:", err);
+    return res.status(502).json({ error: "Не удалось найти релевантный материал для викторины." });
+  }
+
+  if (!chunks.length) {
     return res.status(400).json({ error: "Сначала загрузите учебный материал, затем сгенерируйте викторину." });
   }
 
   const count = Math.min(Math.max(Number(numQuestions) || 5, 1), 15);
+  const context = buildContext(chunks);
 
-  const prompt = `Based on the study material below, write exactly ${count} quiz questions to test understanding of the material. Mix multiple-choice and short-answer questions. Write all question text, options, model answers, and explanations in Russian, regardless of the language of the study material.
+  const prompt = `Based on the study material excerpts below, write exactly ${count} quiz questions to test understanding of the material${trimmedTopic ? ` about "${trimmedTopic}"` : ""}. Mix multiple-choice and short-answer questions. Write all question text, options, model answers, and explanations in Russian, regardless of the language of the study material.
 
 Respond with ONLY a JSON array (no markdown fences, no commentary). Each item must have this shape:
 - For multiple choice: {"type": "multiple_choice", "question": "...", "options": ["...", "...", "...", "..."], "correctAnswer": "the exact text of the correct option", "explanation": "brief explanation"}
 - For short answer: {"type": "short_answer", "question": "...", "modelAnswer": "a concise correct answer", "explanation": "brief explanation"}
 
-STUDY MATERIAL:
+STUDY MATERIAL EXCERPTS:
 """
 ${context}
 """`;

@@ -1,16 +1,19 @@
 import React, { useState } from "react";
 import { generateQuiz, gradeQuiz } from "../api.js";
 import { useDocuments } from "../DocumentsContext.jsx";
-import DocumentPicker from "../components/DocumentPicker.jsx";
+import DirectionFilter from "../components/DirectionFilter.jsx";
 import ModelSelector from "../components/ModelSelector.jsx";
 import { MODEL_OPTIONS } from "../models.js";
+import { ALL_DIRECTIONS } from "../directions.js";
 
 const DEFAULT_QUIZ_MODEL = MODEL_OPTIONS.find((m) => m.value === "deepseek-v4-flash")?.value ?? MODEL_OPTIONS[0].value;
 
 export default function QuizPage() {
-  const { documents, selectedIds } = useDocuments();
+  const { documents } = useDocuments();
   const [numQuestions, setNumQuestions] = useState(5);
   const [model, setModel] = useState(DEFAULT_QUIZ_MODEL);
+  const [direction, setDirection] = useState(ALL_DIRECTIONS);
+  const [topic, setTopic] = useState("");
   const [quizId, setQuizId] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -24,7 +27,7 @@ export default function QuizPage() {
     setResults(null);
     setAnswers({});
     try {
-      const { quizId: id, questions: qs } = await generateQuiz({ documentIds: selectedIds, numQuestions, model });
+      const { quizId: id, questions: qs } = await generateQuiz({ numQuestions, model, direction, topic });
       setQuizId(id);
       setQuestions(qs);
     } catch (err) {
@@ -58,10 +61,25 @@ export default function QuizPage() {
   return (
     <section className="page quiz-page">
       <h2>Проверь себя</h2>
-      <DocumentPicker />
+      {!documents.length && (
+        <p className="hint">
+          Учебные материалы ещё не загружены. Перейдите на вкладку <strong>Материалы</strong>, чтобы добавить их.
+        </p>
+      )}
+      <DirectionFilter value={direction} onChange={setDirection} disabled={loading} />
       <ModelSelector value={model} onChange={setModel} disabled={loading} />
 
       <div className="quiz-controls">
+        <label>
+          Тема (необязательно)
+          <input
+            type="text"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+            placeholder="Например: сопротивление в терапии"
+            disabled={loading}
+          />
+        </label>
         <label>
           Количество вопросов
           <input

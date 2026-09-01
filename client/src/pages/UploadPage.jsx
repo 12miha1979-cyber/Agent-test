@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { uploadDocument, deleteDocument } from "../api.js";
 import { useDocuments } from "../DocumentsContext.jsx";
+import { DIRECTIONS, directionSlug } from "../directions.js";
 
 const ACCEPTED = ".pdf,.docx,.txt";
 
@@ -12,8 +13,10 @@ function formatSize(bytes) {
 
 export default function UploadPage() {
   const { documents, refresh, loading } = useDocuments();
+  const [direction, setDirection] = useState(DIRECTIONS[0]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [processingFile, setProcessingFile] = useState(null);
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef(null);
@@ -27,10 +30,16 @@ export default function UploadPage() {
 
     for (const file of files) {
       setProgress(0);
+      setProcessingFile(null);
       try {
-        await uploadDocument(file, setProgress);
+        await uploadDocument(file, direction, (pct) => {
+          setProgress(pct);
+          if (pct >= 100) setProcessingFile(file.name);
+        });
       } catch (err) {
         setError(err.message);
+      } finally {
+        setProcessingFile(null);
       }
     }
 
@@ -54,6 +63,24 @@ export default function UploadPage() {
       <p className="subtitle">
         Загрузите файлы PDF, Word (.docx) или обычный текст, чтобы использовать их как контекст для чата и викторин.
       </p>
+
+      <div className="direction-picker">
+        <p className="hint">Направление загружаемого файла</p>
+        <div className="direction-options">
+          {DIRECTIONS.map((d) => (
+            <label key={d} className={`direction-option ${direction === d ? "checked" : ""}`}>
+              <input
+                type="radio"
+                name="direction"
+                value={d}
+                checked={direction === d}
+                onChange={() => setDirection(d)}
+              />
+              {d}
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div
         className={`dropzone ${dragActive ? "drag-active" : ""}`}
@@ -84,10 +111,16 @@ export default function UploadPage() {
         <p className="hint">PDF, DOCX, TXT — до 20 МБ каждый</p>
       </div>
 
-      {uploading && (
+      {uploading && !processingFile && (
         <div className="progress-bar">
           <div className="progress-fill" style={{ width: `${progress}%` }} />
         </div>
+      )}
+
+      {processingFile && (
+        <p className="hint processing-hint">
+          Обработка «{processingFile}»: разбиение на фрагменты и создание эмбеддингов…
+        </p>
       )}
 
       {error && <p className="error-text">{error}</p>}
@@ -102,7 +135,12 @@ export default function UploadPage() {
           {documents.map((doc) => (
             <li key={doc.id} className="doc-list-item">
               <div>
-                <div className="doc-name">{doc.name}</div>
+                <div className="doc-name">
+                  {doc.name}
+                  {doc.direction && (
+                    <span className={`direction-badge ${directionSlug(doc.direction)}`}>{doc.direction}</span>
+                  )}
+                </div>
                 <div className="doc-meta">
                   {formatSize(doc.size)} · извлечено символов: {doc.textLength.toLocaleString()}
                 </div>

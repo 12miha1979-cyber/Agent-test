@@ -1,17 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { sendChatMessage } from "../api.js";
 import { useDocuments } from "../DocumentsContext.jsx";
-import DocumentPicker from "../components/DocumentPicker.jsx";
+import DirectionFilter from "../components/DirectionFilter.jsx";
 import ModelSelector from "../components/ModelSelector.jsx";
 import { DEFAULT_MODEL } from "../models.js";
+import { ALL_DIRECTIONS } from "../directions.js";
 
 export default function ChatPage() {
-  const { documents, selectedIds } = useDocuments();
+  const { documents } = useDocuments();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [model, setModel] = useState(DEFAULT_MODEL);
+  const [direction, setDirection] = useState(ALL_DIRECTIONS);
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -34,9 +36,9 @@ export default function ChatPage() {
       const history = nextMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
       const { reply } = await sendChatMessage({
         message: text,
-        documentIds: selectedIds,
         history,
         model,
+        direction,
       });
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch (err) {
@@ -49,7 +51,12 @@ export default function ChatPage() {
   return (
     <section className="page chat-page">
       <h2>Задайте вопрос по материалу</h2>
-      <DocumentPicker />
+      {!documents.length && (
+        <p className="hint">
+          Учебные материалы ещё не загружены. Перейдите на вкладку <strong>Материалы</strong>, чтобы добавить их.
+        </p>
+      )}
+      <DirectionFilter value={direction} onChange={setDirection} disabled={sending} />
       <ModelSelector value={model} onChange={setModel} disabled={sending} />
 
       <div className="chat-window">
