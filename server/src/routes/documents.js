@@ -20,6 +20,10 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     return res.status(400).json({ error: "Файл не был загружен." });
   }
 
+  // multer/busboy decodes multipart filenames as latin1 by default, so a
+  // UTF-8 filename (e.g. Cyrillic) arrives mangled — re-decode it correctly.
+  req.file.originalname = Buffer.from(req.file.originalname, "latin1").toString("utf8");
+
   try {
     const text = await extractText(req.file.buffer, req.file.mimetype, req.file.originalname);
     const trimmed = text.trim();
