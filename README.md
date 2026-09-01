@@ -37,6 +37,15 @@ The client and server can be deployed to different domains:
 - **Server**: set `CORS_ORIGIN` to the client's deployed origin (comma-separate multiple origins if needed). Leave it unset or `*` to allow any origin.
 - **Client**: set `VITE_API_URL` at build time to the server's deployed URL (e.g. `https://api.example.com`), then run `npm run build`. This is a build-time variable — rebuild the client if it changes.
 
+### SPA routing on static hosting
+
+The client is a client-side-routed React app (React Router), so a static host must serve `index.html` for every path — otherwise a direct visit or refresh on `/upload`, `/chat`, etc. 404s instead of loading the app. Two ways this is covered here, either works depending on how the static site is set up:
+
+- `render.yaml` at the repo root defines both services as a Render Blueprint, including a `rewrite` rule (`/* → /index.html`, not a redirect — the URL stays intact and React Router still sees it) for the client's static site.
+- `client/public/_redirects` (Netlify-syntax, also read by Render's static sites when no Blueprint route is configured) contains the same `/* /index.html 200` rewrite. Vite copies it into `client/dist/` on every build.
+
+If deploying the client as a Render static site manually (not via the Blueprint), just make sure a rewrite rule for `/*` → `/index.html` with a 200 status is configured — the `_redirects` file alone is enough for that.
+
 ## Retrieval-augmented chat and quizzes (RAG)
 
 Every document is tagged with a "Направление" (direction) at upload time — either **Системная семейная терапия** or **КПТ** — and, right after upload, its text is split into overlapping ~550-word chunks (~100-word overlap) and embedded with AITUNNEL's `text-embedding-3-small` model (`server/src/chunking.js`, `server/src/embeddings.js`). Chunks are stored in a separate `chunks` table (`server/src/storage.js`), each carrying its parent document id/name/direction.
