@@ -47,11 +47,16 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 });
 
 router.delete("/:id", (req, res) => {
-  const removed = removeDocument(req.params.id);
-  if (!removed) {
-    return res.status(404).json({ error: "Документ не найден." });
+  try {
+    const removed = removeDocument(req.params.id);
+    if (!removed) {
+      return res.status(404).json({ error: "Документ не найден." });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete error:", err);
+    res.status(500).json({ error: "Не удалось удалить документ." });
   }
-  res.json({ success: true });
 });
 
 export default router;

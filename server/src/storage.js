@@ -10,7 +10,14 @@ const DB_PATH = path.join(DATA_DIR, "tutor.db");
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new DatabaseSync(DB_PATH);
-db.exec("PRAGMA journal_mode = WAL");
+
+// Deliberately NOT using WAL mode: WAL writes go to a separate tutor.db-wal
+// sidecar file and are only merged back into tutor.db on a checkpoint, which
+// makes the main file look untouched after an upload (and risks data loss if
+// something ever backs up tutor.db alone). This app is single-process with no
+// concurrent readers, so the default rollback journal — which commits
+// directly into tutor.db every time — is simpler and avoids that confusion.
+db.exec("PRAGMA journal_mode = DELETE");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS documents (
@@ -32,7 +39,12 @@ const deleteStmt = db.prepare("DELETE FROM documents WHERE id = ?");
 const selectAllStmt = db.prepare("SELECT * FROM documents");
 
 export function addDocument(doc) {
-  insertStmt.run(doc);
+  try {
+    insertStmt.run(doc);
+  } catch (err) {
+    console.error("Failed to write document to SQLite:", err);
+    throw err;
+  }
   return doc;
 }
 
@@ -45,7 +57,12 @@ export function listDocuments() {
 }
 
 export function removeDocument(id) {
-  return deleteStmt.run(id).changes > 0;
+  try {
+    return deleteStmt.run(id).changes > 0;
+  } catch (err) {
+    console.error("Failed to delete document from SQLite:", err);
+    throw err;
+  }
 }
 
 export function getCombinedText(ids) {
