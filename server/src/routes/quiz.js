@@ -15,9 +15,16 @@ function stripToPublicQuestion(q) {
 
 function extractJson(text) {
   const start = text.indexOf("[");
+  if (start === -1) throw new Error("No JSON array found in model response.");
   const end = text.lastIndexOf("]");
-  if (start === -1 || end === -1) throw new Error("No JSON array found in model response.");
-  return JSON.parse(text.slice(start, end + 1));
+  try {
+    return JSON.parse(text.slice(start, end + 1));
+  } catch {
+    // The reply was likely cut off at max_tokens: keep every complete question.
+    const lastObject = text.lastIndexOf("}");
+    if (lastObject <= start) throw new Error("Model response is not valid JSON.");
+    return JSON.parse(text.slice(start, lastObject + 1) + "]");
+  }
 }
 
 function buildContext(chunks) {
@@ -29,10 +36,22 @@ function buildContext(chunks) {
 function normalize(text) {
   return String(text || "")
     .toLowerCase()
-    .replace(/[«»"'“”„`]/g, "")
+    .replace(/ё/g, "е")
+    .replace(/[«»"'“”„`✔✓✅•*]/g, "")
     .replace(/[—–-]/g, "-")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Models often shorten a quote with "..." or wrap it in punctuation; accept the
+// quote when every substantial fragment of it occurs verbatim in the material.
+function quoteFound(quote, normalizedContext) {
+  const parts = normalize(quote)
+    .split(/\.\.\.|…/)
+    .map((p) => p.replace(/^[\s.,;:!?()-]+|[\s.,;:!?()-]+$/g, ""))
+    .filter((p) => p.length >= 5);
+  const total = parts.reduce((n, p) => n + p.length, 0);
+  return total >= 10 && parts.every((p) => normalizedContext.includes(p));
 }
 
 // A question is kept only if its answer is traceable to the material: the
@@ -40,8 +59,7 @@ function normalize(text) {
 // multiple-choice answer must be one of its own options. This stops the model
 // from substituting general knowledge for what the material actually says.
 function isGrounded(q, normalizedContext) {
-  const quote = normalize(q.sourceQuote);
-  if (quote.length < 10 || !normalizedContext.includes(quote)) return false;
+  if (!quoteFound(q.sourceQuote, normalizedContext)) return false;
   if (q.type === "multiple_choice") {
     return Array.isArray(q.options) && q.options.some((o) => normalize(o) === normalize(q.correctAnswer));
   }
@@ -49,8 +67,7 @@ function isGrounded(q, normalizedContext) {
 }
 
 function sourceFor(quote, chunks) {
-  const n = normalize(quote);
-  return chunks.find((c) => normalize(c.text).includes(n))?.documentName ?? null;
+  return chunks.find((c) => quoteFound(quote, normalize(c.text)))?.documentName ?? null;
 }
 
 router.post("/generate", async (req, res) => {
@@ -100,22 +117,26 @@ STUDY MATERIAL EXCERPTS:
 ${context}
 """`;
 
+  let text = "";
   try {
     const response = await ai.chat.completions.create({
       model: selectedModel,
-      max_tokens: 2048,
+      max_tokens: 6000,
       messages: [{ role: "user", content: prompt }],
     });
 
-    const text = response.choices[0]?.message?.content ?? "";
+    text = response.choices[0]?.message?.content ?? "";
 
     const parsed = extractJson(text);
 
     const normalizedContext = normalize(chunks.map((c) => c.text).join("\n"));
     const grounded = parsed.filter((q) => isGrounded(q, normalizedContext));
-    const dropped = parsed.length - grounded.length;
-    if (dropped) {
-      console.warn(`Quiz generation: dropped ${dropped} of ${parsed.length} questions not grounded in the material.`);
+    const rejected = parsed.filter((q) => !grounded.includes(q));
+    if (rejected.length) {
+      console.warn(
+        `Quiz generation: dropped ${rejected.length} of ${parsed.length} questions not grounded in the material:`,
+        rejected.map((q) => ({ question: q.question, sourceQuote: q.sourceQuote }))
+      );
     }
 
     if (!grounded.length) {
@@ -130,7 +151,7 @@ ${context}
 
     res.status(201).json({ quizId: quiz.id, questions: quiz.questions.map(stripToPublicQuestion) });
   } catch (err) {
-    console.error("Quiz generation error:", err);
+    console.error("Quiz generation error:", err, "\nModel reply (first 1500 chars):", text.slice(0, 1500));
     res.status(502).json({ error: "Не удалось сгенерировать викторину. Попробуйте ещё раз." });
   }
 });
