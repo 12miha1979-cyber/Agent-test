@@ -82,10 +82,12 @@ router.post("/generate", async (req, res) => {
 
   const trimmedTopic = typeof topic === "string" ? topic.trim() : "";
   const query = trimmedTopic || direction || "ключевые понятия и важные факты";
+  const count = Math.min(Math.max(Number(numQuestions) || 5, 1), 15);
 
   let chunks;
   try {
-    chunks = await retrieveChunks({ query, direction, topK: TOP_K });
+    // A bigger quiz needs more material to draw distinct, quotable questions from.
+    chunks = await retrieveChunks({ query, direction, topK: Math.min(Math.max(TOP_K, count * 2), 24) });
   } catch (err) {
     console.error("Retrieval error:", err);
     return res.status(502).json({ error: "Не удалось найти релевантный материал для викторины." });
@@ -95,10 +97,13 @@ router.post("/generate", async (req, res) => {
     return res.status(400).json({ error: "Сначала загрузите учебный материал, затем сгенерируйте викторину." });
   }
 
-  const count = Math.min(Math.max(Number(numQuestions) || 5, 1), 15);
   const context = buildContext(chunks);
 
-  const prompt = `Based on the study material excerpts below, write exactly ${count} quiz questions to test understanding of the material${trimmedTopic ? ` about "${trimmedTopic}"` : ""}. Mix multiple-choice and short-answer questions. Write all question text, options, model answers, and explanations in Russian, regardless of the language of the study material.
+  const buildPrompt = (n, avoid) => `Based on the study material excerpts below, write exactly ${n} quiz questions to test understanding of the material${trimmedTopic ? ` about "${trimmedTopic}"` : ""}. Mix multiple-choice and short-answer questions. Write all question text, options, model answers, and explanations in Russian, regardless of the language of the study material.${
+    avoid.length
+      ? `\n\nDo NOT repeat or rephrase these questions, which are already in the quiz — cover other facts from the excerpts:\n${avoid.map((q) => `- ${q}`).join("\n")}`
+      : ""
+  }
 
 STRICT RULES FOR CORRECT ANSWERS:
 1. Every correct answer must be stated explicitly in the excerpts. Never use general knowledge, and never infer an answer from a term's name or abbreviation (e.g. the letter order of an acronym does not define a sequence).
@@ -117,43 +122,65 @@ STUDY MATERIAL EXCERPTS:
 ${context}
 """`;
 
-  let text = "";
-  try {
-    const response = await ai.chat.completions.create({
-      model: selectedModel,
-      max_tokens: 6000,
-      messages: [{ role: "user", content: prompt }],
-    });
+  // Some questions are always dropped by the grounding check, so ask for a few
+  // extra and, if still short, run up to two more rounds for the remainder.
+  const MAX_ROUNDS = 3;
+  const normalizedContext = normalize(chunks.map((c) => c.text).join("\n"));
+  const collected = [];
+  const seen = new Set();
+  let lastError = null;
 
-    text = response.choices[0]?.message?.content ?? "";
-
-    const parsed = extractJson(text);
-
-    const normalizedContext = normalize(chunks.map((c) => c.text).join("\n"));
-    const grounded = parsed.filter((q) => isGrounded(q, normalizedContext));
-    const rejected = parsed.filter((q) => !grounded.includes(q));
-    if (rejected.length) {
-      console.warn(
-        `Quiz generation: dropped ${rejected.length} of ${parsed.length} questions not grounded in the material:`,
-        rejected.map((q) => ({ question: q.question, sourceQuote: q.sourceQuote }))
-      );
-    }
-
-    if (!grounded.length) {
-      return res.status(502).json({
-        error: "Не удалось составить вопросы, подтверждённые материалом. Попробуйте ещё раз или выберите модель Claude Sonnet.",
+  for (let round = 1; round <= MAX_ROUNDS && collected.length < count; round++) {
+    const remaining = count - collected.length;
+    const ask = Math.min(remaining + Math.max(2, Math.ceil(remaining / 2)), 20);
+    let text = "";
+    try {
+      const response = await ai.chat.completions.create({
+        model: selectedModel,
+        max_tokens: 6000,
+        messages: [{ role: "user", content: buildPrompt(ask, collected.map((q) => q.question)) }],
       });
+      text = response.choices[0]?.message?.content ?? "";
+      const parsed = extractJson(text);
+
+      const rejected = [];
+      for (const q of parsed) {
+        const key = normalize(q.question);
+        if (!isGrounded(q, normalizedContext)) {
+          rejected.push(q);
+        } else if (key && !seen.has(key) && collected.length < count) {
+          seen.add(key);
+          collected.push(q);
+        }
+      }
+      if (rejected.length) {
+        console.warn(
+          `Quiz generation round ${round}: dropped ${rejected.length} of ${parsed.length} questions not grounded in the material:`,
+          rejected.map((q) => ({ question: q.question, sourceQuote: q.sourceQuote }))
+        );
+      }
+    } catch (err) {
+      lastError = err;
+      console.error(`Quiz generation round ${round} error:`, err, "\nModel reply (first 1500 chars):", text.slice(0, 1500));
     }
-
-    const questions = grounded.map((q) => ({ id: uuidv4(), ...q, source: sourceFor(q.sourceQuote, chunks) }));
-
-    const quiz = addQuiz({ id: uuidv4(), questions, model: selectedModel, createdAt: new Date().toISOString() });
-
-    res.status(201).json({ quizId: quiz.id, questions: quiz.questions.map(stripToPublicQuestion) });
-  } catch (err) {
-    console.error("Quiz generation error:", err, "\nModel reply (first 1500 chars):", text.slice(0, 1500));
-    res.status(502).json({ error: "Не удалось сгенерировать викторину. Попробуйте ещё раз." });
   }
+
+  if (!collected.length) {
+    return res.status(502).json({
+      error: lastError
+        ? "Не удалось сгенерировать викторину. Попробуйте ещё раз."
+        : "Не удалось составить вопросы, подтверждённые материалом. Попробуйте ещё раз или выберите модель Claude Sonnet.",
+    });
+  }
+
+  if (collected.length < count) {
+    console.warn(`Quiz generation: only ${collected.length} of ${count} requested questions are grounded in the material.`);
+  }
+
+  const questions = collected.map((q) => ({ id: uuidv4(), ...q, source: sourceFor(q.sourceQuote, chunks) }));
+  const quiz = addQuiz({ id: uuidv4(), questions, model: selectedModel, createdAt: new Date().toISOString() });
+
+  res.status(201).json({ quizId: quiz.id, requested: count, questions: quiz.questions.map(stripToPublicQuestion) });
 });
 
 router.post("/grade", async (req, res) => {

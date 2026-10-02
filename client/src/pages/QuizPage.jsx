@@ -16,6 +16,7 @@ export default function QuizPage() {
   const [topic, setTopic] = useState("");
   const [quizId, setQuizId] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [requested, setRequested] = useState(0);
   const [answers, setAnswers] = useState({});
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -27,7 +28,8 @@ export default function QuizPage() {
     setResults(null);
     setAnswers({});
     try {
-      const { quizId: id, questions: qs } = await generateQuiz({ numQuestions, model, direction, topic });
+      const { quizId: id, questions: qs, requested: req } = await generateQuiz({ numQuestions, model, direction, topic });
+      setRequested(req || qs.length);
       setQuizId(id);
       setQuestions(qs);
     } catch (err) {
@@ -97,6 +99,12 @@ export default function QuizPage() {
 
       {error && <p className="error-text">{error}</p>}
       {loading && <p className="hint">Обработка…</p>}
+      {!loading && questions.length > 0 && questions.length < requested && (
+        <p className="hint">
+          Удалось составить {questions.length} из {requested} вопросов, ответы на которые точно подтверждаются материалом.
+          Чтобы получить больше, сгенерируйте викторину ещё раз, выберите направление «Все» или модель Claude Sonnet.
+        </p>
+      )}
 
       {results && (
         <div className="quiz-score">
