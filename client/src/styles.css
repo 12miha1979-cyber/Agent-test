@@ -450,6 +450,22 @@ body {
   color: var(--text-muted);
 }
 
+.quiz-source {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--border);
+  color: var(--text);
+  font-style: italic;
+}
+
+.quiz-source cite {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  font-style: normal;
+  color: var(--text-muted);
+}
+
 .submit-quiz {
   margin-top: 16px;
   width: 100%;

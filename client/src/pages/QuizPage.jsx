@@ -143,6 +143,12 @@ export default function QuizPage() {
                 <div className={`quiz-feedback ${result.correct === true ? "correct" : result.correct === false ? "incorrect" : "neutral"}`}>
                   {result.feedback}
                   {result.explanation && <div className="quiz-explanation">{result.explanation}</div>}
+                  {result.sourceQuote && (
+                    <blockquote className="quiz-source">
+                      «{result.sourceQuote}»
+                      {result.source && <cite>Источник: {result.source}</cite>}
+                    </blockquote>
+                  )}
                 </div>
               )}
             </li>

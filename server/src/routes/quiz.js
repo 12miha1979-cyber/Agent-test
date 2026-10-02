@@ -26,6 +26,33 @@ function buildContext(chunks) {
     .join("\n\n---\n\n");
 }
 
+function normalize(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[«»"'“”„`]/g, "")
+    .replace(/[—–-]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// A question is kept only if its answer is traceable to the material: the
+// quoted passage must really occur in the retrieved excerpts, and a
+// multiple-choice answer must be one of its own options. This stops the model
+// from substituting general knowledge for what the material actually says.
+function isGrounded(q, normalizedContext) {
+  const quote = normalize(q.sourceQuote);
+  if (quote.length < 10 || !normalizedContext.includes(quote)) return false;
+  if (q.type === "multiple_choice") {
+    return Array.isArray(q.options) && q.options.some((o) => normalize(o) === normalize(q.correctAnswer));
+  }
+  return q.type === "short_answer" && Boolean(q.modelAnswer);
+}
+
+function sourceFor(quote, chunks) {
+  const n = normalize(quote);
+  return chunks.find((c) => normalize(c.text).includes(n))?.documentName ?? null;
+}
+
 router.post("/generate", async (req, res) => {
   const { numQuestions = 5, model, direction, topic } = req.body || {};
   const selectedModel = resolveModel(model, QUIZ_MODEL);
@@ -56,9 +83,17 @@ router.post("/generate", async (req, res) => {
 
   const prompt = `Based on the study material excerpts below, write exactly ${count} quiz questions to test understanding of the material${trimmedTopic ? ` about "${trimmedTopic}"` : ""}. Mix multiple-choice and short-answer questions. Write all question text, options, model answers, and explanations in Russian, regardless of the language of the study material.
 
+STRICT RULES FOR CORRECT ANSWERS:
+1. Every correct answer must be stated explicitly in the excerpts. Never use general knowledge, and never infer an answer from a term's name or abbreviation (e.g. the letter order of an acronym does not define a sequence).
+2. If the material contradicts common knowledge, the material wins.
+3. If the excerpts contain test questions with marked answers (✔, ✓, +, "правильный ответ", bold, etc.), those marked answers are authoritative — reuse them exactly.
+4. Only ask questions whose answer you can support with a verbatim quote. If you cannot, skip that question.
+
 Respond with ONLY a JSON array (no markdown fences, no commentary). Each item must have this shape:
-- For multiple choice: {"type": "multiple_choice", "question": "...", "options": ["...", "...", "...", "..."], "correctAnswer": "the exact text of the correct option", "explanation": "brief explanation"}
-- For short answer: {"type": "short_answer", "question": "...", "modelAnswer": "a concise correct answer", "explanation": "brief explanation"}
+- For multiple choice: {"type": "multiple_choice", "question": "...", "options": ["...", "...", "...", "..."], "correctAnswer": "the exact text of the correct option", "explanation": "brief explanation", "sourceQuote": "..."}
+- For short answer: {"type": "short_answer", "question": "...", "modelAnswer": "a concise correct answer", "explanation": "brief explanation", "sourceQuote": "..."}
+
+"sourceQuote" must be copied VERBATIM, character for character, from the excerpts (one continuous passage of 10-300 characters, without the [Источник: ...] label) and must directly show the correct answer. Do not translate or paraphrase it.
 
 STUDY MATERIAL EXCERPTS:
 """
@@ -76,7 +111,20 @@ ${context}
 
     const parsed = extractJson(text);
 
-    const questions = parsed.map((q) => ({ id: uuidv4(), ...q }));
+    const normalizedContext = normalize(chunks.map((c) => c.text).join("\n"));
+    const grounded = parsed.filter((q) => isGrounded(q, normalizedContext));
+    const dropped = parsed.length - grounded.length;
+    if (dropped) {
+      console.warn(`Quiz generation: dropped ${dropped} of ${parsed.length} questions not grounded in the material.`);
+    }
+
+    if (!grounded.length) {
+      return res.status(502).json({
+        error: "Не удалось составить вопросы, подтверждённые материалом. Попробуйте ещё раз или выберите модель Claude Sonnet.",
+      });
+    }
+
+    const questions = grounded.map((q) => ({ id: uuidv4(), ...q, source: sourceFor(q.sourceQuote, chunks) }));
 
     const quiz = addQuiz({ id: uuidv4(), questions, model: selectedModel, createdAt: new Date().toISOString() });
 
@@ -107,14 +155,17 @@ router.post("/grade", async (req, res) => {
 
     const userAnswer = (submitted.answer || "").trim();
 
+    const evidence = { source: question.source, sourceQuote: question.sourceQuote };
+
     if (question.type === "multiple_choice") {
-      const correct = userAnswer.toLowerCase() === (question.correctAnswer || "").toLowerCase();
+      const correct = normalize(userAnswer) === normalize(question.correctAnswer);
       results.push({
         questionId: question.id,
         correct,
         correctAnswer: question.correctAnswer,
         explanation: question.explanation,
         feedback: correct ? "Верно!" : `Не совсем. Правильный ответ: ${question.correctAnswer}`,
+        ...evidence,
       });
     } else {
       results.push({
@@ -124,6 +175,7 @@ router.post("/grade", async (req, res) => {
         modelAnswer: question.modelAnswer,
         explanation: question.explanation,
         needsGrading: true,
+        ...evidence,
       });
     }
   }
@@ -132,7 +184,13 @@ router.post("/grade", async (req, res) => {
 
   if (shortAnswerItems.length && isConfigured()) {
     try {
-      const gradingPrompt = `Grade the following short-answer quiz responses. For each, decide if the student's answer is correct, partially correct, or incorrect compared to the model answer, and give brief encouraging feedback (1-2 sentences) written in Russian.
+      const gradingPrompt = `Grade the following short-answer quiz responses and give brief encouraging feedback (1-2 sentences) written in Russian.
+
+How to judge:
+- "sourceQuote" is a verbatim excerpt from the student's study material and is the AUTHORITATIVE answer key. If "modelAnswer" disagrees with "sourceQuote", trust "sourceQuote".
+- Never use general knowledge or the name/letters of a term to decide what is correct — only the source quote.
+- Judge meaning, not formatting: "СЭРМ", "С-Э-Р-М" and "Ситуация, Эмоции, Реакция, Мысли" are the same answer.
+- If the answer is wrong, the feedback must state the correct answer exactly as the source quote gives it.
 
 Respond with ONLY a JSON array, one object per item in the same order, shaped as:
 {"correct": true|false, "feedback": "..."}
@@ -141,6 +199,7 @@ ITEMS:
 ${JSON.stringify(
   shortAnswerItems.map((r) => ({
     question: quiz.questions.find((q) => q.id === r.questionId)?.question,
+    sourceQuote: r.sourceQuote,
     modelAnswer: r.modelAnswer,
     studentAnswer: r.userAnswer,
   })),
