@@ -30,6 +30,10 @@ npm run dev
 
 Runs on `http://localhost:5173` and talks to the server at `VITE_API_URL` (see `client/.env.example`), which defaults to `http://localhost:3001` if not set. Open it on your phone by visiting `http://<your-computer-ip>:5173` while on the same network (the dev server binds to all interfaces).
 
+### Windows: one-click start
+
+Double-click `start_tutor.bat` in the project root. It starts the server and client of the copy it sits in (so documents come from that copy's `server/data/tutor.db`), installs packages on first run, and opens `http://localhost:5173/`. It needs `server/.env` with `AITUNNEL_API_KEY`.
+
 ## Deploying to separate hosts
 
 The client and server can be deployed to different domains:
