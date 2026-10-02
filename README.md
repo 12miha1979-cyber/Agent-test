@@ -34,6 +34,15 @@ Runs on `http://localhost:5173` and talks to the server at `VITE_API_URL` (see `
 
 Double-click `start_tutor.bat` in the project root. It starts the server and client of the copy it sits in (so documents come from that copy's `server/data/tutor.db`), installs packages on first run, and opens `http://localhost:5173/`. It needs `server/.env` with `AITUNNEL_API_KEY`.
 
+### Several tutors on one computer
+
+Each tutor is its own copy of the project folder (own `server/data/tutor.db`). Configure the extra copy with:
+
+- `server/.env`: `PORT=3002`, `TUTOR_TITLE=...`, `DIRECTIONS=First;Second;Third` (served to the client via `GET /api/config`).
+- `client/.env.local`: `VITE_API_URL=http://localhost:3002` and `VITE_PORT=5174`.
+
+`start_tutor.bat` reads `VITE_PORT` and opens the matching address. Unset values keep the defaults (ИИ-репетитор, Системная семейная терапия / КПТ, ports 3001 / 5173), so the Render deployment is unaffected.
+
 ## Deploying to separate hosts
 
 The client and server can be deployed to different domains:

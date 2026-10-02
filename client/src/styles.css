@@ -239,14 +239,24 @@ body {
   vertical-align: middle;
 }
 
-.direction-badge.cbt {
+.direction-badge.dir-0 {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.direction-badge.dir-1 {
   background: #dbeafe;
   color: #1d4ed8;
 }
 
-.direction-badge.sft {
-  background: #fce7f3;
-  color: #be185d;
+.direction-badge.dir-2 {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.direction-badge.dir-3 {
+  background: #fef3c7;
+  color: #b45309;
 }
 
 .processing-hint {

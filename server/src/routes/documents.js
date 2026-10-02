@@ -3,7 +3,7 @@ import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { extractText } from "../utils/extract.js";
 import { addDocument, listDocuments, removeDocument, addChunks } from "../storage.js";
-import { isValidDirection } from "../directions.js";
+import { DIRECTIONS, isValidDirection } from "../directions.js";
 import { chunkText } from "../chunking.js";
 import { embedTexts } from "../embeddings.js";
 import { isConfigured } from "../ai.js";
@@ -30,7 +30,9 @@ router.post("/upload", upload.single("file"), async (req, res) => {
 
   const direction = req.body?.direction;
   if (!isValidDirection(direction)) {
-    return res.status(400).json({ error: "Укажите направление документа: «Системная семейная терапия» или «КПТ»." });
+    return res
+      .status(400)
+      .json({ error: `Укажите направление документа: ${DIRECTIONS.map((d) => `«${d}»`).join(", ")}.` });
   }
 
   try {

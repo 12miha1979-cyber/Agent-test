@@ -30,11 +30,20 @@ if not exist "%~dp0client\node_modules" (
   pushd "%~dp0client" && call npm install && popd
 )
 
-start "AI Tutor - server (do not close)" /d "%~dp0server" cmd /k npm start
-start "AI Tutor - client (do not close)" /d "%~dp0client" cmd /k npm run dev
+rem The site's port comes from client\.env.local (VITE_PORT), default 5173,
+rem so two tutors can run side by side.
+set "CLIENT_PORT=5173"
+if exist "%~dp0client\.env.local" (
+  for /f "usebackq tokens=1,* delims==" %%A in ("%~dp0client\.env.local") do (
+    if /i "%%A"=="VITE_PORT" set "CLIENT_PORT=%%B"
+  )
+)
+
+start "AI Tutor %CLIENT_PORT% - server (do not close)" /d "%~dp0server" cmd /k npm start
+start "AI Tutor %CLIENT_PORT% - client (do not close)" /d "%~dp0client" cmd /k npm run dev
 
 echo.
 echo Server and client are starting in separate windows. Do not close them.
-echo The browser will open in a few seconds: http://localhost:5173/
+echo The browser will open in a few seconds: http://localhost:%CLIENT_PORT%/
 timeout /t 6 /nobreak >nul
-start "" http://localhost:5173/
+start "" http://localhost:%CLIENT_PORT%/

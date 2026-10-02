@@ -5,6 +5,7 @@ import documentsRouter from "./routes/documents.js";
 import chatRouter from "./routes/chat.js";
 import quizRouter from "./routes/quiz.js";
 import { isConfigured } from "./ai.js";
+import { DIRECTIONS, TUTOR_TITLE } from "./directions.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,6 +22,10 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", assistantConfigured: isConfigured() });
 });
 
+app.get("/api/config", (req, res) => {
+  res.json({ title: TUTOR_TITLE, directions: DIRECTIONS });
+});
+
 app.use("/api/documents", documentsRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/quiz", quizRouter);
@@ -35,6 +40,7 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`AI Tutor server listening on port ${PORT}`);
+  console.log(`Tutor: ${TUTOR_TITLE} | directions: ${DIRECTIONS.join(", ")}`);
   if (!isConfigured()) {
     console.warn("Warning: AITUNNEL_API_KEY is not set. Chat and quiz features will be disabled.");
   }

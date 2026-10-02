@@ -1,7 +1,8 @@
 import React, { useRef, useState } from "react";
 import { uploadDocument, deleteDocument } from "../api.js";
 import { useDocuments } from "../DocumentsContext.jsx";
-import { DIRECTIONS, directionSlug } from "../directions.js";
+import { directionBadgeClass } from "../directions.js";
+import { useConfig } from "../ConfigContext.jsx";
 
 const ACCEPTED = ".pdf,.docx,.txt";
 
@@ -13,7 +14,11 @@ function formatSize(bytes) {
 
 export default function UploadPage() {
   const { documents, refresh, loading } = useDocuments();
-  const [direction, setDirection] = useState(DIRECTIONS[0]);
+  const { directions } = useConfig();
+  const [chosenDirection, setDirection] = useState(null);
+  // Directions arrive from the server after the first render; fall back to the
+  // first one until the user picks, or if their pick is no longer offered.
+  const direction = directions.includes(chosenDirection) ? chosenDirection : directions[0];
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [processingFile, setProcessingFile] = useState(null);
@@ -67,7 +72,7 @@ export default function UploadPage() {
       <div className="direction-picker">
         <p className="hint">Направление загружаемого файла</p>
         <div className="direction-options">
-          {DIRECTIONS.map((d) => (
+          {directions.map((d) => (
             <label key={d} className={`direction-option ${direction === d ? "checked" : ""}`}>
               <input
                 type="radio"
@@ -138,7 +143,7 @@ export default function UploadPage() {
                 <div className="doc-name">
                   {doc.name}
                   {doc.direction && (
-                    <span className={`direction-badge ${directionSlug(doc.direction)}`}>{doc.direction}</span>
+                    <span className={`direction-badge ${directionBadgeClass(doc.direction, directions)}`}>{doc.direction}</span>
                   )}
                 </div>
                 <div className="doc-meta">

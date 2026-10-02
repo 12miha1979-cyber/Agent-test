@@ -9,6 +9,10 @@ async function handle(res) {
   return data;
 }
 
+export function getConfig() {
+  return fetch(`${BASE}/config`).then(handle);
+}
+
 export function getHealth() {
   return fetch(`${BASE}/health`).then(handle);
 }
